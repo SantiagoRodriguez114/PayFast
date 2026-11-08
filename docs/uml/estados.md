@@ -40,9 +40,3 @@ stateDiagram-v2
 | El saldo solo se acredita con confirmación de la pasarela (HU-08, criterio 4) | `EXITOSA` solo se alcanza desde `PENDIENTE` |
 | No se duplican acreditaciones (RNF-03) | `EXITOSA` no tiene salidas |
 | Un error de pasarela no queda como éxito (RNF-05) | `FALLIDA` no puede ir directo a `EXITOSA` |
-
-## Pendiente para el entregable final
-
-El enunciado pide que el diagrama incluya subestados y temporizadores `after()`.
-La implementación actual no los tiene. Hay que decidir si se modelan en el diagrama
-(por ejemplo, un vencimiento de la fase de financiación) o se declaran como evolución futura.
