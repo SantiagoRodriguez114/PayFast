@@ -31,7 +31,7 @@ class RegistroUsuario(BaseModel):
         max_length=128
     )
 
-    rol: Literal["emprendedor", "prestamista"]
+    rol: Literal["emprendedor", "prestamista"] # limita los roles a los que se pueden registrar los usuarios
 
 
 class InicioSesion(BaseModel):

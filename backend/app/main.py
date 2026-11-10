@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from app.api.auth import router as auth_router
 
 from app.db.session import get_db
 
@@ -12,6 +13,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.include_router(auth_router)
 
 @app.get("/")
 def home():
