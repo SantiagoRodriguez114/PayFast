@@ -50,3 +50,7 @@ class Usuario(Base):
         secondary=usuario_rol,
         back_populates="usuarios"
     )
+
+    billeteras: Mapped[list["Billetera"]] = relationship(
+        back_populates="usuario"
+    )
