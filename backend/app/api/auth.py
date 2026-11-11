@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from app.api.dependencies import get_current_user
+from app.models import Usuario
 
 from app.db.session import get_db
 from app.schemas.auth import RegistroUsuario, UsuarioPublico
@@ -93,3 +95,19 @@ def login(
             detail="Correo o contraseña incorrectos.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+@router.get("/me", response_model=UsuarioPublico)
+def obtener_usuario_actual(
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Devuelve los datos públicos del usuario autenticado."""
+
+    return {
+        "id": usuario.id,
+        "nombre": usuario.nombre,
+        "correo": usuario.correo,
+        "activo": usuario.activo,
+        "creado_en": usuario.creado_en,
+        "roles": [rol.nombre for rol in usuario.roles],
+    }
