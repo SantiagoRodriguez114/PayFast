@@ -1,57 +1,9 @@
-import pytest
+from sqlalchemy import select
 
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from app.main import app
-from app.db.base import Base
-from app.db.session import get_db
 from app.core.security import decode_access_token
+from app.db.session import get_db
+from app.main import app
 from app.models import Rol, Usuario
-
-
-@pytest.fixture
-def client():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    TestingSessionLocal = sessionmaker(
-        bind=engine,
-        autoflush=False,
-        autocommit=False,
-    )
-
-    Base.metadata.create_all(bind=engine)
-
-    db = TestingSessionLocal()
-
-    db.add_all([
-        Rol(nombre="emprendedor"),
-        Rol(nombre="prestamista"),
-    ])
-    db.commit()
-    db.close()
-
-    def override_get_db():
-        database = TestingSessionLocal()
-        try:
-            yield database
-        finally:
-            database.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    with TestClient(app) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=engine)
-    engine.dispose()
 
 # El usuario se registra correctamente con un rol válido
 def test_registro_usuario_exitoso(client):
