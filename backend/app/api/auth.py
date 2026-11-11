@@ -9,6 +9,13 @@ from app.services.auth_service import (
     registrar_usuario,
 )
 
+from app.core.security import create_access_token
+from app.schemas.auth import InicioSesion, TokenRespuesta
+from app.services.auth_service import (
+    InvalidCredentials,
+    autenticar_usuario,
+)
+
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -44,4 +51,45 @@ def register(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="El rol solicitado no está configurado.",
+        )
+
+
+@router.post(
+    "/login",
+    response_model=TokenRespuesta,
+    status_code=status.HTTP_200_OK,
+)
+def login(
+    datos: InicioSesion,
+    db: Session = Depends(get_db),
+):
+    """
+    Autentica al usuario y devuelve un token JWT.
+
+    El token identifica al usuario mediante su UUID.
+    """
+
+    try:
+        # Verificamos las credenciales contra PostgreSQL.
+        usuario = autenticar_usuario(
+            db,
+            datos.correo,
+            datos.password
+        )
+
+        # El UUID del usuario se utiliza como identificador del token.
+        token = create_access_token(
+            data={"sub": str(usuario.id)}
+        )
+
+        return TokenRespuesta(
+            access_token=token,
+            token_type="bearer"
+        )
+
+    except InvalidCredentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Correo o contraseña incorrectos.",
+            headers={"WWW-Authenticate": "Bearer"},
         )

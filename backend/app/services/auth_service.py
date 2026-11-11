@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.models import Rol, Usuario
 from app.schemas.auth import RegistroUsuario
+from app.core.security import verify_password
 
 
 class EmailAlreadyRegistered(Exception):
@@ -54,5 +55,45 @@ def registrar_usuario(db: Session, datos: RegistroUsuario) -> Usuario:
     except IntegrityError as error:
         db.rollback()
         raise EmailAlreadyRegistered from error
+
+    return usuario
+
+
+class InvalidCredentials(Exception):
+    """Se produce cuando las credenciales no son válidas."""
+
+
+def autenticar_usuario(
+    db: Session,
+    correo: str,
+    password: str
+) -> Usuario:
+    """
+    Verifica las credenciales de un usuario.
+
+    Devuelve el usuario si las credenciales son correctas
+    y la cuenta está activa. No revela si falló el correo,
+    la contraseña o el estado de la cuenta.
+    """
+
+    # Normalizamos el correo para mantener consistencia.
+    correo = correo.strip().lower()
+
+    # Buscamos el usuario por su correo.
+    consulta = select(Usuario).where(
+        Usuario.correo == correo
+    )
+    usuario = db.scalar(consulta)
+
+    # Se utiliza el mismo error para evitar revelar información.
+    if usuario is None:
+        raise InvalidCredentials
+
+    if not usuario.activo:
+        raise InvalidCredentials
+
+    # Comprobamos la contraseña contra el hash Argon2 almacenado.
+    if not verify_password(password, usuario.password_hash):
+        raise InvalidCredentials
 
     return usuario
