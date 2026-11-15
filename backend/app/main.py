@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from app.api.auth import router as auth_router
 from app.api.wallets import router as wallets_router
+from app.api import credit_requests
 
 from app.db.session import get_db
 
@@ -16,6 +17,7 @@ app = FastAPI(
 
 app.include_router(auth_router)
 app.include_router(wallets_router)
+app.include_router(credit_requests.router)
 
 @app.get("/")
 def home():

@@ -7,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.associations import usuario_rol
 
-
 class Usuario(Base):
     __tablename__ = "usuario"
 
@@ -53,4 +52,8 @@ class Usuario(Base):
 
     billeteras: Mapped[list["Billetera"]] = relationship(
         back_populates="usuario"
+    )
+
+    solicitudes_credito: Mapped[list["SolicitudCredito"]] = relationship(
+    back_populates="usuario"
     )
