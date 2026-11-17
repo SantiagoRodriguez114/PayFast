@@ -20,12 +20,9 @@ from app.db.base import Base
 class SolicitudCredito(Base):
     """
     Representa una solicitud de microcrédito realizada por un emprendedor.
-
-    La solicitud se registra inicialmente como pendiente de evaluación.
-    El proceso de scoring se ejecutará posteriormente y de forma separada.
     """
 
-    __tablename__ = "solicitud_credito"
+    __tablename__ = "solicitudes_credito"
 
     __table_args__ = (
         CheckConstraint(
@@ -35,6 +32,14 @@ class SolicitudCredito(Base):
         CheckConstraint(
             "plazo_meses > 0",
             name="ck_solicitud_plazo_positivo"
+        ),
+        CheckConstraint(
+            "monto_financiado >= 0",
+            name="ck_solicitud_monto_financiado_no_negativo"
+        ),
+        CheckConstraint(
+            "monto_financiado <= monto",
+            name="ck_solicitud_monto_financiado_limite"
         ),
     )
 
@@ -54,6 +59,13 @@ class SolicitudCredito(Base):
     monto: Mapped[Decimal] = mapped_column(
         Numeric(18, 2),
         nullable=False
+    )
+
+    monto_financiado: Mapped[Decimal] = mapped_column(
+        Numeric(18, 2),
+        nullable=False,
+        default=Decimal("0.00"),
+        server_default=text("0.00")
     )
 
     plazo_meses: Mapped[int] = mapped_column(
@@ -79,11 +91,18 @@ class SolicitudCredito(Base):
         server_default=func.now()
     )
 
+    @property
+    def saldo_pendiente(self) -> Decimal:
+        monto_f = self.monto_financiado or Decimal("0.00")
+        return self.monto - monto_f
+
     usuario: Mapped["Usuario"] = relationship(
         back_populates="solicitudes_credito"
     )
 
     evaluaciones_riesgo: Mapped[list["EvaluacionRiesgo"]] = relationship(
-    back_populates="solicitud",
-    cascade="all, delete-orphan",
+        back_populates="solicitud",
+        cascade="all, delete-orphan",
     )
+
+    aportes = relationship("Aporte", back_populates="solicitud", cascade="all, delete-orphan")

@@ -1,6 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from decimal import Decimal
+from app.domain.states import EstadoSolicitud
 
 from app.models.credit_request import SolicitudCredito
 from app.models.wallet import Billetera
@@ -88,3 +90,37 @@ def obtener_solicitud_usuario(
     )
 
     return db.scalar(consulta)
+
+ESTADOS_ELEGIBLES_P2P = (
+    EstadoSolicitud.EVALUADA.value,
+    EstadoSolicitud.EN_FINANCIACION.value,
+)
+
+
+def listar_solicitudes_elegibles(
+    db: Session,
+    monto_min: Decimal | None = None,
+    monto_max: Decimal | None = None,
+    plazo_min: int | None = None,
+    plazo_max: int | None = None,
+    proposito_q: str | None = None,
+) -> list[SolicitudCredito]:
+    consulta = select(SolicitudCredito).where(
+        SolicitudCredito.estado.in_([EstadoSolicitud.EVALUADA.value, EstadoSolicitud.EN_FINANCIACION.value]),
+        (SolicitudCredito.monto - SolicitudCredito.monto_financiado) > 0,
+    )
+
+    if monto_min is not None:
+        consulta = consulta.where(SolicitudCredito.monto >= monto_min)
+    if monto_max is not None:
+        consulta = consulta.where(SolicitudCredito.monto <= monto_max)
+    if plazo_min is not None:
+        consulta = consulta.where(SolicitudCredito.plazo_meses >= plazo_min)
+    if plazo_max is not None:
+        consulta = consulta.where(SolicitudCredito.plazo_meses <= plazo_max)
+    if proposito_q:
+        termino = f"%{proposito_q.strip()}%"
+        consulta = consulta.where(SolicitudCredito.proposito.ilike(termino))
+
+    consulta = consulta.order_by(SolicitudCredito.creada_en.desc())
+    return list(db.scalars(consulta).all())

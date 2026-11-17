@@ -1,7 +1,8 @@
-from datetime import datetime
 from decimal import Decimal
-from typing import Annotated
+from datetime import datetime
 from uuid import UUID
+from pydantic import BaseModel, ConfigDict
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -31,6 +32,18 @@ class SolicitudCreditoCrear(BaseModel):
 class SolicitudCreditoPublica(BaseModel):
     id: UUID
     monto: Decimal
+    plazo_meses: int
+    proposito: str
+    estado: str
+    creada_en: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class SolicitudElegiblePublica(BaseModel):
+    id: UUID
+    monto: Decimal
+    monto_financiado: Decimal
+    saldo_pendiente: Decimal
     plazo_meses: int
     proposito: str
     estado: str

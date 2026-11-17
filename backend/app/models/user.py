@@ -57,3 +57,6 @@ class Usuario(Base):
     solicitudes_credito: Mapped[list["SolicitudCredito"]] = relationship(
     back_populates="usuario"
     )
+
+    aportes = relationship("Aporte", back_populates="prestamista", cascade="all, delete-orphan")
+

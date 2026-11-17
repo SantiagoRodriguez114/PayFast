@@ -28,27 +28,25 @@ def upgrade() -> None:
         """
     )
 
-    # Establecer el nuevo estado predeterminado.
-    op.alter_column(
-        "solicitud_credito",
-        "estado",
-        existing_type=sa.String(length=40),
-        existing_nullable=False,
-        server_default=sa.text("'PENDIENTE_EVALUACION'"),
-    )
+    # Usar batch_alter_table para compatibilidad con SQLite y PostgreSQL
+    with op.batch_alter_table("solicitud_credito", schema=None) as batch_op:
+        batch_op.alter_column(
+            "estado",
+            existing_type=sa.String(length=40),
+            existing_nullable=False,
+            server_default=sa.text("'PENDIENTE_EVALUACION'"),
+        )
 
 
 def downgrade() -> None:
-    # Revertir el valor predeterminado.
-    op.alter_column(
-        "solicitud_credito",
-        "estado",
-        existing_type=sa.String(length=40),
-        existing_nullable=False,
-        server_default=sa.text("'pendiente_evaluacion'"),
-    )
+    with op.batch_alter_table("solicitud_credito", schema=None) as batch_op:
+        batch_op.alter_column(
+            "estado",
+            existing_type=sa.String(length=40),
+            existing_nullable=False,
+            server_default=sa.text("'pendiente_evaluacion'"),
+        )
 
-    # Revertir los estados iniciales existentes.
     op.execute(
         """
         UPDATE solicitud_credito

@@ -62,3 +62,19 @@ def get_current_user(
         raise unauthorized
 
     return usuario
+
+def require_role(required_role: str):
+    """Verifica que el usuario autenticado posea el rol requerido."""
+    def _role_checker(usuario: Usuario = Depends(get_current_user)) -> Usuario:
+        roles_usuario = {rol.nombre for rol in usuario.roles}
+        if required_role not in roles_usuario:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Acceso denegado: se requiere el rol '{required_role}'.",
+            )
+        return usuario
+
+    return _role_checker
+
+
+require_prestamista = require_role("prestamista")
