@@ -21,7 +21,7 @@ Todos los endpoints requieren autenticación mediante un token JWT de acceso.
 - El usuario debe estar autenticado para registrar o consultar solicitudes.
 - El emprendedor debe tener una billetera activa para registrar una solicitud.
 - Cada solicitud queda asociada al usuario autenticado.
-- El estado inicial de una solicitud es `pendiente_evaluacion`.
+- El estado inicial de una solicitud es `PENDIENTE_EVALUACION`.
 - La creación de una solicitud no implica su aprobación.
 - Registrar una solicitud no modifica el saldo de la billetera.
 - Un usuario solamente puede consultar sus propias solicitudes.

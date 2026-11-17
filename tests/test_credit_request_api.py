@@ -82,7 +82,7 @@ def test_crear_solicitud_correctamente(client):
 
     assert datos["monto"] == "800000.00"
     assert datos["plazo_meses"] == 12
-    assert datos["estado"] == "pendiente_evaluacion"
+    assert datos["estado"] == "PENDIENTE_EVALUACION"
     assert datos["proposito"] == datos_solicitud()["proposito"]
     assert datos["id"] is not None
     assert datos["creada_en"] is not None

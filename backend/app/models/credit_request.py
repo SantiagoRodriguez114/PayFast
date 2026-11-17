@@ -17,7 +17,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
-
 class SolicitudCredito(Base):
     """
     Representa una solicitud de microcrédito realizada por un emprendedor.
@@ -70,8 +69,8 @@ class SolicitudCredito(Base):
     estado: Mapped[str] = mapped_column(
         String(40),
         nullable=False,
-        default="pendiente_evaluacion",
-        server_default=text("'pendiente_evaluacion'")
+        default="PENDIENTE_EVALUACION",
+        server_default=text("'PENDIENTE_EVALUACION'")
     )
 
     creada_en: Mapped[datetime] = mapped_column(
@@ -82,4 +81,9 @@ class SolicitudCredito(Base):
 
     usuario: Mapped["Usuario"] = relationship(
         back_populates="solicitudes_credito"
+    )
+
+    evaluaciones_riesgo: Mapped[list["EvaluacionRiesgo"]] = relationship(
+    back_populates="solicitud",
+    cascade="all, delete-orphan",
     )
