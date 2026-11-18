@@ -1,94 +1,159 @@
-from decimal import Decimal
 import uuid
+from decimal import Decimal
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.domain.states import EstadoSolicitud, EstadoTransaccion
 from app.models.credit_request import SolicitudCredito
+from app.models.transaction import Transaccion
 from app.models.wallet import Billetera
-from app.models.transaction import Transaccion, EstadoTransaccion
+from app.services.pasarela_service import PasarelaBancariaService
+
 
 class DesembolsoError(Exception):
-    pass
+    """Error de validación durante un desembolso."""
 
-class PasarelaBancariaService:
-    @staticmethod
-    def procesar_desembolso(monto: Decimal, cuenta_destino: str) -> dict:
-        if monto <= 0:
-            return {"exito": False, "error": "Monto inválido para pasarela"}
-        return {
-            "exito": True,
-            "referencia_pasarela": f"TRX-SIM-{uuid.uuid4().hex[:10].upper()}"
-        }
 
-def desembolsar_credito(db: Session, usuario_actual, solicitud_id: uuid.UUID):
-    solicitud = db.get(SolicitudCredito, solicitud_id)
-    if not solicitud:
-        raise DesembolsoError("Solicitud de crédito no encontrada.")
+def desembolsar_credito(
+    db: Session,
+    usuario_actual,
+    solicitud_id: uuid.UUID,
+):
+    """
+    Procesa un desembolso simulado.
 
-    if solicitud.usuario_id != usuario_actual.id:
-        raise DesembolsoError("No tienes permisos para desembolsar esta solicitud.")
+    En PostgreSQL, bloquea la solicitud y la billetera
+    para evitar acreditaciones concurrentes.
+    """
+    try:
+        # Bloquear la solicitud durante la operación.
+        solicitud = db.execute(
+            select(SolicitudCredito)
+            .where(SolicitudCredito.id == solicitud_id)
+            .with_for_update()
+        ).scalar_one_or_none()
 
-    # 1. VALIDAR IDEMPOTENCIA PRIMERO (evitar doble desembolso antes de chequear estado)
-    transaccion_existente = db.query(Transaccion).filter_by(
-        solicitud_id=solicitud_id,
-        estado=EstadoTransaccion.EXITOSA
-    ).first()
-    
-    if transaccion_existente:
-        raise DesembolsoError("Esta solicitud ya cuenta con un desembolso confirmado exitosamente.")
+        if solicitud is None:
+            raise DesembolsoError(
+                "Solicitud de crédito no encontrada."
+            )
 
-    # 2. VALIDAR ELEGIBILIDAD
-    if solicitud.estado != "FINANCIADA":
-        raise DesembolsoError(f"La solicitud no cumple condiciones de desembolso. Estado actual: {solicitud.estado}")
+        if solicitud.usuario_id != usuario_actual.id:
+            raise DesembolsoError(
+                "No tienes permisos para desembolsar esta solicitud."
+            )
 
-    billetera = db.query(Billetera).filter_by(usuario_id=solicitud.usuario_id).first()
-    if not billetera or not billetera.activa:
-        raise DesembolsoError("El emprendedor no posee una billetera activa.")
+        # Comprobar si ya existe un desembolso exitoso.
+        transaccion_existente = db.execute(
+            select(Transaccion).where(
+                Transaccion.solicitud_id == solicitud.id,
+                Transaccion.estado == EstadoTransaccion.EXITOSA,
+            )
+        ).scalar_one_or_none()
 
-    resultado_pasarela = PasarelaBancariaService.procesar_desembolso(
-        solicitud.monto, 
-        str(billetera.id)
-    )
+        if transaccion_existente is not None:
+            raise DesembolsoError(
+                "Esta solicitud ya cuenta con un desembolso confirmado exitosamente."
+            )
 
-    if not resultado_pasarela["exito"]:
-        trx_fallida = Transaccion(
+        if solicitud.estado != EstadoSolicitud.FINANCIADA:
+            raise DesembolsoError(
+                "La solicitud no cumple condiciones de desembolso. "
+                f"Estado actual: {solicitud.estado}"
+            )
+
+        # Bloquear la billetera del emprendedor.
+        billetera = db.execute(
+            select(Billetera)
+            .where(
+                Billetera.usuario_id == solicitud.usuario_id,
+                Billetera.tipo == "principal",
+            )
+            .with_for_update()
+        ).scalar_one_or_none()
+
+        if billetera is None or not billetera.activa:
+            raise DesembolsoError(
+                "El emprendedor no posee una billetera activa."
+            )
+
+        # Ejecutar la operación simulada.
+        resultado = PasarelaBancariaService.procesar_desembolso(
+            monto=solicitud.monto,
+            cuenta_destino=str(billetera.id),
+        )
+
+        if not resultado["exito"]:
+            transaccion_fallida = Transaccion(
+                solicitud_id=solicitud.id,
+                billetera_id=billetera.id,
+                monto=solicitud.monto,
+                estado=EstadoTransaccion.FALLIDA,
+                referencia_pasarela=None,
+            )
+
+            db.add(transaccion_fallida)
+            db.commit()
+
+            raise DesembolsoError(
+                "La pasarela bancaria rechazó el desembolso."
+            )
+
+        # Registrar la transacción exitosa.
+        transaccion = Transaccion(
             solicitud_id=solicitud.id,
             billetera_id=billetera.id,
             monto=solicitud.monto,
-            estado=EstadoTransaccion.FALLIDA,
-            referencia_pasarela=None,
+            estado=EstadoTransaccion.EXITOSA,
+            referencia_pasarela=resultado["referencia_pasarela"],
         )
-        db.add(trx_fallida)
+
+        db.add(transaccion)
+
+        # Acreditar el saldo y actualizar el estado.
+        billetera.saldo = (
+            (billetera.saldo or Decimal("0.00"))
+            + solicitud.monto
+        )
+
+        solicitud.estado = EstadoSolicitud.DESEMBOLSADA
+
         db.commit()
-        raise DesembolsoError("La pasarela bancaria rechazó el desembolso.")
+        db.refresh(transaccion)
 
-    trx_exitosa = Transaccion(
-        solicitud_id=solicitud.id,
-        billetera_id=billetera.id,
-        monto=solicitud.monto,
-        estado=EstadoTransaccion.EXITOSA,
-        referencia_pasarela=resultado_pasarela["referencia_pasarela"],
-    )
-    db.add(trx_exitosa)
+        return {
+            "mensaje": "Desembolso realizado con éxito.",
+            "transaccion_id": str(transaccion.id),
+            "referencia_pasarela": transaccion.referencia_pasarela,
+            "monto_desembolsado": str(solicitud.monto),
+            "nuevo_saldo_billetera": str(billetera.saldo),
+        }
 
-    billetera.saldo += solicitud.monto
-    solicitud.estado = "DESEMBOLSADA"
+    except Exception:
+        db.rollback()
+        raise
 
-    db.commit()
-    db.refresh(trx_exitosa)
 
-    return {
-        "mensaje": "Desembolso realizado con éxito.",
-        "transaccion_id": str(trx_exitosa.id),
-        "referencia_pasarela": trx_exitosa.referencia_pasarela,
-        "monto_desembolsado": str(solicitud.monto),
-        "nuevo_saldo_billetera": str(billetera.saldo)
-    }
+def listar_transacciones_usuario(
+    db: Session,
+    usuario_actual,
+):
+    """Consulta las transacciones de las billeteras del usuario."""
 
-def listar_transacciones_usuario(db: Session, usuario_actual):
-    billeteras = db.query(Billetera).filter_by(usuario_id=usuario_actual.id).all()
-    billetera_ids = [b.id for b in billeteras]
+    billeteras = db.execute(
+        select(Billetera).where(
+            Billetera.usuario_id == usuario_actual.id
+        )
+    ).scalars().all()
+
+    billetera_ids = [billetera.id for billetera in billeteras]
 
     if not billetera_ids:
         return []
 
-    return db.query(Transaccion).filter(Transaccion.billetera_id.in_(billetera_ids)).all()
+    return db.execute(
+        select(Transaccion).where(
+            Transaccion.billetera_id.in_(billetera_ids)
+        )
+    ).scalars().all()

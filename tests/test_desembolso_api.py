@@ -1,3 +1,8 @@
+from unittest.mock import patch
+
+from app.domain.states import EstadoTransaccion
+from app.models.transaction import Transaccion
+
 from decimal import Decimal
 from app.db.session import SessionLocal, get_db
 from app.models.credit_request import SolicitudCredito
@@ -49,3 +54,129 @@ def test_consultar_transacciones(client):
     response = client.get("/credit-requests/transactions/me", headers=headers)
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+def test_desembolso_no_duplica_saldo_tras_20_reintentos(client):
+    correo = "emp_reintentos@gmail.com"
+    headers = _registrar_y_login(client, correo)
+
+    db = _get_test_db(client)
+    try:
+        usuario = db.query(Usuario).filter_by(correo=correo).first()
+
+        billetera = Billetera(
+            usuario_id=usuario.id,
+            saldo=Decimal("0.00"),
+            activa=True,
+        )
+
+        solicitud = SolicitudCredito(
+            usuario_id=usuario.id,
+            monto=Decimal("1500000.00"),
+            plazo_meses=12,
+            proposito="Capital de trabajo",
+            estado="FINANCIADA",
+        )
+
+        db.add_all([billetera, solicitud])
+        db.commit()
+        solicitud_id = solicitud.id
+        billetera_id = billetera.id
+    finally:
+        db.close()
+
+    primera_respuesta = client.post(
+        f"/credit-requests/{solicitud_id}/disburse",
+        headers=headers,
+    )
+    assert primera_respuesta.status_code == 200
+
+    for _ in range(20):
+        respuesta = client.post(
+            f"/credit-requests/{solicitud_id}/disburse",
+            headers=headers,
+        )
+        assert respuesta.status_code == 409
+
+    db = _get_test_db(client)
+    try:
+        billetera = db.get(Billetera, billetera_id)
+
+        assert billetera.saldo == Decimal("1500000.00")
+
+        transacciones_exitosas = db.query(Transaccion).filter_by(
+            solicitud_id=solicitud_id,
+            estado=EstadoTransaccion.EXITOSA,
+        ).all()
+
+        assert len(transacciones_exitosas) == 1
+    finally:
+        db.close()
+
+
+def test_20_fallos_pasarela_no_acreditan_saldo(client):
+    correo = "emp_fallos_pasarela@gmail.com"
+    headers = _registrar_y_login(client, correo)
+
+    db = _get_test_db(client)
+    try:
+        usuario = db.query(Usuario).filter_by(correo=correo).first()
+
+        billetera = Billetera(
+            usuario_id=usuario.id,
+            saldo=Decimal("0.00"),
+            activa=True,
+        )
+
+        solicitud = SolicitudCredito(
+            usuario_id=usuario.id,
+            monto=Decimal("900000.00"),
+            plazo_meses=6,
+            proposito="Compra de herramientas",
+            estado="FINANCIADA",
+        )
+
+        db.add_all([billetera, solicitud])
+        db.commit()
+        solicitud_id = solicitud.id
+        billetera_id = billetera.id
+    finally:
+        db.close()
+
+    with patch(
+        "app.services.desembolso_service."
+        "PasarelaBancariaService.procesar_desembolso",
+        return_value={
+            "exito": False,
+            "error": "Fallo simulado de pasarela",
+        },
+    ):
+        for _ in range(20):
+            respuesta = client.post(
+                f"/credit-requests/{solicitud_id}/disburse",
+                headers=headers,
+            )
+            assert respuesta.status_code == 400
+
+    db = _get_test_db(client)
+    try:
+        billetera = db.get(Billetera, billetera_id)
+        solicitud = db.get(SolicitudCredito, solicitud_id)
+
+        assert billetera.saldo == Decimal("0.00")
+        assert solicitud.estado == "FINANCIADA"
+
+        transacciones_exitosas = db.query(Transaccion).filter_by(
+            solicitud_id=solicitud_id,
+            estado=EstadoTransaccion.EXITOSA,
+        ).count()
+
+        transacciones_fallidas = db.query(Transaccion).filter_by(
+            solicitud_id=solicitud_id,
+            estado=EstadoTransaccion.FALLIDA,
+        ).count()
+
+        assert transacciones_exitosas == 0
+        assert transacciones_fallidas == 20
+    finally:
+        db.close()

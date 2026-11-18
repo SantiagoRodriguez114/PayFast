@@ -31,6 +31,7 @@ class Transaccion(Base):
             "solicitud_id",
             unique=True,
             postgresql_where=text("estado = 'EXITOSA'"),
+            sqlite_where=text("estado = 'EXITOSA'"),
         ),
     )
 
