@@ -29,7 +29,7 @@ def desembolsar_credito(db: Session, usuario_actual, solicitud_id: uuid.UUID):
 
     # 1. VALIDAR IDEMPOTENCIA PRIMERO (evitar doble desembolso antes de chequear estado)
     transaccion_existente = db.query(Transaccion).filter_by(
-        solicitud_id=str(solicitud.id), 
+        solicitud_id=solicitud_id,
         estado=EstadoTransaccion.EXITOSA
     ).first()
     
@@ -51,22 +51,22 @@ def desembolsar_credito(db: Session, usuario_actual, solicitud_id: uuid.UUID):
 
     if not resultado_pasarela["exito"]:
         trx_fallida = Transaccion(
-            solicitud_id=str(solicitud.id),
-            billetera_id=str(billetera.id),
+            solicitud_id=solicitud.id,
+            billetera_id=billetera.id,
             monto=solicitud.monto,
             estado=EstadoTransaccion.FALLIDA,
-            referencia_pasarela=None
+            referencia_pasarela=None,
         )
         db.add(trx_fallida)
         db.commit()
         raise DesembolsoError("La pasarela bancaria rechazó el desembolso.")
 
     trx_exitosa = Transaccion(
-        solicitud_id=str(solicitud.id),
-        billetera_id=str(billetera.id),
+        solicitud_id=solicitud.id,
+        billetera_id=billetera.id,
         monto=solicitud.monto,
         estado=EstadoTransaccion.EXITOSA,
-        referencia_pasarela=resultado_pasarela["referencia_pasarela"]
+        referencia_pasarela=resultado_pasarela["referencia_pasarela"],
     )
     db.add(trx_exitosa)
 

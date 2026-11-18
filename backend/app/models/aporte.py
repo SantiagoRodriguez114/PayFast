@@ -1,21 +1,64 @@
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
-from sqlalchemy import Column, DateTime, ForeignKey, Numeric, Uuid
-from sqlalchemy.orm import relationship
+
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    Uuid,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.credit_request import SolicitudCredito
-from app.models.user import Usuario
+
 
 class Aporte(Base):
     __tablename__ = "aportes"
 
-    id = Column(Uuid, primary_key=True, default=uuid.uuid4, index=True)
-    solicitud_id = Column(Uuid, ForeignKey("solicitudes_credito.id"), nullable=False)
-    prestamista_id = Column(Uuid, ForeignKey("usuario.id"), nullable=False)
-    monto = Column(Numeric(12, 2), nullable=False)
-    creado_en = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    __table_args__ = (
+        CheckConstraint(
+            "monto > 0",
+            name="ck_aportes_monto_positivo",
+        ),
+    )
 
-    solicitud = relationship("SolicitudCredito", back_populates="aportes")
-    prestamista = relationship("Usuario", back_populates="aportes")
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    solicitud_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("solicitud_credito.id"),
+        nullable=False,
+        index=True,
+    )
+
+    prestamista_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("usuario.id"),
+        nullable=False,
+        index=True,
+    )
+
+    monto: Mapped[Decimal] = mapped_column(
+        Numeric(18, 2),
+        nullable=False,
+    )
+
+    creado_en: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    solicitud: Mapped["SolicitudCredito"] = relationship(
+        back_populates="aportes",
+    )
+
+    prestamista: Mapped["Usuario"] = relationship(
+        back_populates="aportes",
+    )

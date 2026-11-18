@@ -35,7 +35,7 @@ class EvaluacionRiesgo(Base):
 
     solicitud_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("solicitudes_credito.id"),
+        ForeignKey("solicitud_credito.id"),
         nullable=False,
         index=True,
     )

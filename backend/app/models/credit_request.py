@@ -22,7 +22,7 @@ class SolicitudCredito(Base):
     Representa una solicitud de microcrédito realizada por un emprendedor.
     """
 
-    __tablename__ = "solicitudes_credito"
+    __tablename__ = "solicitud_credito"
 
     __table_args__ = (
         CheckConstraint(
