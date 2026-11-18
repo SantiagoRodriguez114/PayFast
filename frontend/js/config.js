@@ -1,1 +1,1 @@
-window.PAYFAST_API_URL = "http://127.0.0.1:8000";
+window.PAYFAST_API_URL = "https://payfast-6iv9.onrender.com";
