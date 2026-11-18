@@ -11,6 +11,13 @@ from app.services.wallet_service import (
     WalletAlreadyExists,
 )
 
+from app.core.config import settings
+from app.schemas.wallet import RecargaSimuladaCrear
+from app.services.wallet_service import (
+    recargar_billetera_simulada,
+    RecargaSimuladaError,
+)
+
 router = APIRouter(
     prefix="/wallets",
     tags=["Billeteras"]
@@ -58,3 +65,32 @@ def consultar_billetera(
         )
 
     return billetera
+
+@router.post(
+    "/me/top-up",
+    response_model=BilleteraPublica,
+    summary="Recargar saldo ficticio para demostración",
+)
+def recargar_saldo_simulado(
+    datos: RecargaSimuladaCrear,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(get_current_user),
+):
+    if not settings.enable_demo_topups:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Las recargas simuladas están deshabilitadas.",
+        )
+
+    try:
+        return recargar_billetera_simulada(
+            db=db,
+            usuario=usuario_actual,
+            monto=datos.monto,
+        )
+
+    except RecargaSimuladaError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error

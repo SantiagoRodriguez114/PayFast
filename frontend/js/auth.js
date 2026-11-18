@@ -1,3 +1,10 @@
+/**
+ * auth.js — Registro, inicio y cierre de sesión.
+ *
+ * Valida los datos en el cliente (las mismas reglas del backend) y
+ * coordina el token con api.js.
+ */
+
 import {
   registerUser,
   loginUser,

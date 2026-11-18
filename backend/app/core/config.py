@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     algorithm: str = "HS256" # algoritmo para la generación de tokens JWT
     access_token_expire_minutes: int = 30 # tiempo de validez del token
 
+    enable_demo_topups: bool = False
+
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
         env_file_encoding="utf-8",

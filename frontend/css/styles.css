@@ -1,3 +1,5 @@
+/* styles.css — Estilos de PayFast. Paleta: azul #2563eb, texto #17233b, fondo #f5f7fb. */
+
 :root {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #17233b;
@@ -29,10 +31,12 @@ button:disabled {
   opacity: 0.65;
 }
 
+/* Utilidad: oculta un elemento (se usa para alternar vistas) */
 .hidden {
   display: none !important;
 }
 
+/* Barra superior */
 .topbar {
   min-height: 76px;
   padding: 16px max(24px, calc((100vw - 1160px) / 2));
@@ -76,6 +80,7 @@ button:disabled {
   font-size: 12px;
 }
 
+/* Contenedor principal */
 .main-container {
   max-width: 1160px;
   min-height: calc(100vh - 150px);
@@ -83,6 +88,7 @@ button:disabled {
   padding: 58px 24px;
 }
 
+/* Vista de acceso: presentación y tarjeta de login/registro */
 .auth-layout {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
@@ -153,6 +159,7 @@ button:disabled {
   font-size: 12px;
 }
 
+/* Tarjetas y paneles */
 .auth-card,
 .panel {
   background: white;
@@ -189,6 +196,7 @@ button:disabled {
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
+/* Formularios */
 .form {
   display: flex;
   flex-direction: column;
@@ -242,6 +250,7 @@ button:disabled {
   margin: -12px 0 18px;
 }
 
+/* Botones */
 .btn {
   display: inline-flex;
   justify-content: center;
@@ -278,6 +287,7 @@ button:disabled {
   margin-top: 4px;
 }
 
+/* Avisos (éxito y error) */
 .notification {
   margin-bottom: 24px;
   padding: 14px 18px;
@@ -294,6 +304,7 @@ button:disabled {
   border-color: #fecaca;
 }
 
+/* Panel principal: perfil y billetera */
 .dashboard-heading {
   display: flex;
   align-items: center;
@@ -411,6 +422,7 @@ button:disabled {
   line-height: 1.7;
 }
 
+/* Pie de página */
 .footer {
   padding: 22px;
   text-align: center;
@@ -418,6 +430,7 @@ button:disabled {
   font-size: 12px;
 }
 
+/* Adaptación a pantallas medianas y pequeñas */
 @media (max-width: 850px) {
   .auth-layout,
   .dashboard-grid {
@@ -459,4 +472,331 @@ button:disabled {
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+
+/* Módulo de financiación: solicitudes, catálogo y movimientos */
+.finance-section {
+  margin-top: 32px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.section-heading h2 {
+  margin: 0 0 8px;
+  font-size: 23px;
+}
+
+.section-heading p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.finance-grid {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 22px;
+}
+
+.finance-grid h3,
+.catalog-card h3 {
+  margin-top: 0;
+}
+
+.finance-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.finance-form label,
+.filter-form label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.finance-form input,
+.finance-form textarea,
+.filter-form input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d9e1ec;
+  border-radius: 10px;
+  background: white;
+  color: #17233b;
+  font: inherit;
+}
+
+.finance-form textarea {
+  resize: vertical;
+}
+
+.finance-form .btn {
+  margin-top: 8px;
+}
+
+.item-list {
+  display: grid;
+  gap: 14px;
+}
+
+.request-item,
+.transaction-item {
+  padding: 17px;
+  border: 1px solid #e5eaf2;
+  border-radius: 12px;
+  background: #fafcff;
+}
+
+.item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.item-heading strong {
+  overflow-wrap: anywhere;
+}
+
+.item-meta {
+  margin: 6px 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.status-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eaf1ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.item-actions .btn {
+  min-height: 36px;
+  font-size: 12px;
+}
+
+.evaluation-details {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #eff6ff;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.filter-form {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 22px;
+}
+
+.filter-form > div {
+  display: grid;
+  gap: 8px;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.catalog-card {
+  padding: 23px;
+  border: 1px solid #e5eaf2;
+  border-radius: 16px;
+  background: white;
+}
+
+.catalog-card p {
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.catalog-card .amount {
+  margin: 15px 0;
+  color: #17233b;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.progress-track {
+  height: 9px;
+  margin: 14px 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5eaf2;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+}
+
+.contribution-form {
+  display: flex;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.contribution-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d9e1ec;
+  border-radius: 10px;
+}
+
+@media (max-width: 850px) {
+  .finance-grid,
+  .catalog-grid,
+  .filter-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .contribution-form {
+    flex-direction: column;
+  }
+
+  .item-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* ---------- Correcciones y complementos ---------- */
+
+.wallet-hint {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13px;
+}
+
+.filter-form {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.filter-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d9e1ec;
+  border-radius: 10px;
+}
+
+.filter-actions {
+  display: flex !important;
+  gap: 9px;
+}
+
+.status-rechazada,
+.status-fallida {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-financiada,
+.status-exitosa,
+.status-desembolsada {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-pendiente_evaluacion,
+.status-pendiente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.evaluation-entry + .evaluation-entry {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #dbe7fb;
+}
+
+.state-hint {
+  margin: 10px 0 0;
+  color: #475569;
+  font-size: 13px;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+
+/* Recarga de saldo de demostración (dentro de la tarjeta de billetera) */
+
+.topup-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e5eaf2;
+}
+
+.topup-form label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.topup-row {
+  display: flex;
+  gap: 9px;
+}
+
+.topup-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d9e1ec;
+  border-radius: 10px;
+}
+
+.topup-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topup-presets .btn {
+  min-height: 32px;
+  font-size: 12px;
 }

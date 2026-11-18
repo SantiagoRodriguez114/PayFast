@@ -7,6 +7,8 @@ from sqlalchemy.exc import IntegrityError
 from app.models.user import Usuario
 from app.models.wallet import Billetera
 
+from sqlalchemy import select
+
 
 class WalletAlreadyExists(Exception):
     """Se produce cuando el usuario ya tiene una billetera principal."""
@@ -81,3 +83,52 @@ def obtener_billetera(db: Session, usuario_id: UUID) -> Billetera | None:
         )
         .first()
     )
+
+
+class RecargaSimuladaError(Exception):
+    """Error de negocio durante una recarga simulada."""
+
+
+def recargar_billetera_simulada(
+    db: Session,
+    usuario: Usuario,
+    monto: Decimal,
+) -> Billetera:
+    """
+    Acredita saldo ficticio a la billetera principal del usuario.
+
+    Utiliza un bloqueo de fila para proteger las actualizaciones
+    concurrentes cuando se ejecuta sobre PostgreSQL.
+    """
+    try:
+        billetera = db.execute(
+            select(Billetera)
+            .where(
+                Billetera.usuario_id == usuario.id,
+                Billetera.tipo == "principal",
+            )
+            .with_for_update()
+        ).scalar_one_or_none()
+
+        if billetera is None:
+            raise RecargaSimuladaError(
+                "Debes crear una billetera antes de recargar saldo."
+            )
+
+        if not billetera.activa:
+            raise RecargaSimuladaError(
+                "La billetera se encuentra inactiva."
+            )
+
+        billetera.saldo = (
+            (billetera.saldo or Decimal("0.00")) + monto
+        )
+
+        db.commit()
+        db.refresh(billetera)
+
+        return billetera
+
+    except Exception:
+        db.rollback()
+        raise

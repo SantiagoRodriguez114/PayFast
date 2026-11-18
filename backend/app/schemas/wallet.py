@@ -21,3 +21,15 @@ class BilleteraPublica(BaseModel):
     creada_en: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class RecargaSimuladaCrear(BaseModel):
+    """Datos para acreditar fondos ficticios en una billetera."""
+
+    monto: Decimal = Field(
+        gt=Decimal("0.00"),
+        le=Decimal("10000000.00"),
+        max_digits=18,
+        decimal_places=2,
+    )
+
+    model_config = ConfigDict(extra="forbid")

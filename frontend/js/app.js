@@ -1,8 +1,29 @@
-import { register, login, logout } from "./auth.js";
-import { createWallet, getWallet } from "./api.js";
+/**
+ * app.js — Punto de entrada de la interfaz de PayFast.
+ *
+ * Controla la vista de acceso (login y registro), el panel principal
+ * (perfil y billetera, incluida la recarga de demostración) y delega
+ * el módulo de financiación en financing.js.
+ */
 
+import { register, login, logout } from "./auth.js";
+import {
+  createWallet,
+  getWallet,
+  topUpWallet,
+  setUnauthorizedHandler,
+} from "./api.js";
+import {
+  initializeFinancing,
+  loadFinancingForUser,
+  resetFinancingView,
+  setWalletState,
+} from "./financing.js";
+
+/** Atajo para document.querySelector. */
 const $ = (selector) => document.querySelector(selector);
 
+// Referencias a los elementos principales de la interfaz.
 const authView = $("#auth-view");
 const dashboardView = $("#dashboard-view");
 const loginForm = $("#login-form");
@@ -14,6 +35,7 @@ const logoutButton = $("#logout-btn");
 
 const notification = $("#notification");
 
+/** Temporizador del aviso activo, para reiniciarlo si llega otro. */
 let notificationTimeout = null;
 
 /**
@@ -118,6 +140,12 @@ async function openDashboard(user) {
   logoutButton.classList.remove("hidden");
 
   await loadWallet();
+
+  try {
+    await loadFinancingForUser(user);
+  } catch (error) {
+    notify(error.message, "error");
+  }
 }
 
 /**
@@ -171,9 +199,17 @@ async function loadWallet() {
       : "Inactiva";
 
     content.classList.remove("hidden");
+    // Una billetera existente no basta: debe estar activa para solicitar,
+    // aportar o recargar (el backend rechaza esas operaciones si no lo está).
+    setWalletState(true, wallet.activa);
+    setTopupControls(
+      wallet.activa,
+      wallet.activa ? "" : "Tu billetera está inactiva: no puedes recargar saldo."
+    );
   } catch (error) {
     if (error.status === 404) {
       empty.classList.remove("hidden");
+      setWalletState(false);
     } else {
       notify(error.message, "error");
     }
@@ -277,20 +313,129 @@ $("#refresh-wallet-btn").addEventListener("click", async (event) => {
   }
 });
 
+/** Tope por recarga que acepta el backend (COP). */
+const MAX_TOPUP = 10_000_000;
+
+/** true cuando el servidor respondió 403: las recargas de demostración están apagadas. */
+let topupDisabled = false;
+
+/** Aviso que se muestra cuando el servidor tiene las recargas apagadas. */
+const TOPUP_SERVER_OFF = "Las recargas de demostración están deshabilitadas en este servidor.";
+
 /**
- * Cierre de sesión.
+ * Activa o desactiva los controles de recarga y muestra un aviso opcional.
+ * Si el servidor tiene las recargas apagadas (topupDisabled) nunca se
+ * activan, aunque la billetera esté en buen estado.
+ * @param {boolean} enabled Si la billetera permite recargar.
+ * @param {string} [notice] Motivo a mostrar; vacío oculta el aviso.
  */
-logoutButton.addEventListener("click", () => {
+function setTopupControls(enabled, notice = "") {
+  const active = enabled && !topupDisabled;
+
+  $("#topup-amount").disabled = !active;
+  $("#topup-btn").disabled = !active;
+  document
+    .querySelectorAll(".topup-preset")
+    .forEach((button) => (button.disabled = !active));
+
+  const text = topupDisabled ? TOPUP_SERVER_OFF : notice;
+  const note = $("#topup-disabled");
+
+  note.textContent = text;
+  note.classList.toggle("hidden", !text);
+}
+
+/** Marca las recargas como apagadas por el servidor (HTTP 403) y bloquea el formulario. */
+function disableTopup() {
+  topupDisabled = true;
+  setTopupControls(false);
+}
+
+/** Los botones de monto rápido solo rellenan el campo; no envían nada. */
+document.querySelectorAll(".topup-preset").forEach((button) => {
+  button.addEventListener("click", () => {
+    $("#topup-amount").value = button.dataset.amount;
+  });
+});
+
+/**
+ * Recarga de saldo ficticio (POST /wallets/me/top-up).
+ * Valida el monto en el cliente, acredita y vuelve a consultar la billetera.
+ */
+$("#topup-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (topupDisabled) {
+    return;
+  }
+
+  // currentTarget vale null después de un await: se guarda antes.
+  const form = event.currentTarget;
+  const monto = $("#topup-amount").value.trim();
+
+  if (!/^\d+(\.\d{1,2})?$/.test(monto) || Number(monto) <= 0) {
+    notify("El monto debe ser mayor que cero y tener máximo dos decimales.", "error");
+    return;
+  }
+
+  if (Number(monto) > MAX_TOPUP) {
+    notify(`El máximo por recarga es ${formatMoney(MAX_TOPUP)}.`, "error");
+    return;
+  }
+
+  try {
+    await withLoading($("#topup-btn"), () => topUpWallet(monto));
+
+    form.reset();
+
+    // La recarga ya fue acreditada: se confirma primero y después se
+    // refresca el saldo, para que un fallo de esa consulta no parezca
+    // una recarga fallida.
+    notify(`Recarga de ${formatMoney(monto)} acreditada.`);
+
+    await loadWallet();
+  } catch (error) {
+    if (error.status === 403) {
+      disableTopup();
+    }
+
+    notify(error.message, "error");
+  }
+});
+
+/**
+ * Cierra la sesión del navegador y vuelve a la pantalla de acceso.
+ * Lo usan el botón "Cerrar sesión" y el manejador de token vencido (401).
+ * @param {string} message Aviso a mostrar.
+ * @param {"success"|"error"} [type]
+ */
+function closeSession(message, type = "success") {
   logout();
+  resetFinancingView();
 
   dashboardView.classList.add("hidden");
   authView.classList.remove("hidden");
   logoutButton.classList.add("hidden");
 
-  showAuthTab("login");
+  $("#wallet-balance").textContent = "$0,00";
 
-  notify("Sesión cerrada.");
+  showAuthTab("login");
+  notify(message, type);
+}
+
+logoutButton.addEventListener("click", () => {
+  closeSession("Sesión cerrada.");
+});
+
+// El token vence a los 30 minutos: se vuelve al login con un aviso claro.
+setUnauthorizedHandler(() => {
+  closeSession("Tu sesión expiró. Inicia sesión de nuevo.", "error");
 });
 
 // Estado inicial de la aplicación.
 showAuthTab("login");
+
+initializeFinancing({
+  notify,
+  reloadWallet: loadWallet,
+});
