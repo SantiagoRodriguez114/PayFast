@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     enable_demo_topups: bool = False
 
+    frontend_origin: str = ""
+
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
         env_file_encoding="utf-8",
