@@ -114,3 +114,73 @@ def test_aportar_monto_superior_al_saldo_pendiente_falla(client):
     )
 
     assert response.status_code == 400
+    assert "supera el saldo pendiente" in response.json()["detail"]
+
+def test_aporte_completo_financia_solicitud_y_descuenta_saldo(client):
+    # Registrar emprendedor y preparar su billetera.
+    correo_emp = "emp_completo@gmail.com"
+    headers_emp = _registrar_y_login(
+        client, correo_emp, "emprendedor"
+    )
+    _crear_billetera_para_usuario(client, correo_emp)
+
+    solicitud_id = _crear_solicitud_emprendedor(
+        client,
+        headers_emp,
+        1000000,
+        12,
+        "Compra de maquinaria",
+    )
+    assert solicitud_id is not None
+
+    # Preparar una solicitud elegible para financiación.
+    db = _get_test_db(client)
+    try:
+        solicitud = db.get(
+            SolicitudCredito,
+            uuid.UUID(str(solicitud_id)),
+        )
+        assert solicitud is not None
+        solicitud.estado = "EVALUADA"
+        db.commit()
+    finally:
+        db.close()
+
+    # Registrar prestamista con fondos suficientes.
+    correo_prest = "prest_completo@gmail.com"
+    headers_prest = _registrar_y_login(
+        client, correo_prest, "prestamista"
+    )
+    _crear_billetera_para_usuario(
+        client, correo_prest, "1500000.00"
+    )
+
+    # Financiar el monto completo.
+    response = client.post(
+        f"/credit-requests/{solicitud_id}/contributions",
+        headers=headers_prest,
+        json={"monto": "1000000.00"},
+    )
+
+    assert response.status_code == 201
+
+    # Verificar los efectos persistidos en la base de datos.
+    db = _get_test_db(client)
+    try:
+        solicitud = db.get(
+            SolicitudCredito,
+            uuid.UUID(str(solicitud_id)),
+        )
+        prestamista = db.query(Usuario).filter_by(
+            correo=correo_prest
+        ).one()
+        billetera = db.query(Billetera).filter_by(
+            usuario_id=prestamista.id,
+            tipo="principal",
+        ).one()
+
+        assert solicitud.estado == "FINANCIADA"
+        assert solicitud.monto_financiado == Decimal("1000000.00")
+        assert billetera.saldo == Decimal("500000.00")
+    finally:
+        db.close()

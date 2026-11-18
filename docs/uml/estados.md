@@ -1,42 +1,56 @@
 # Máquinas de estados de PayFast
 
-Implementadas en `backend/app/domain/states.py` y verificadas por
-`tests/test_state_request.py` y `tests/test_state_transaction.py`.
+Las reglas de transición se definen en `backend/app/domain/states.py`. Los servicios implementan las operaciones que modifican los estados de las solicitudes y las transacciones.
 
-## SolicitudCredito
+## 1. Estados de las solicitudes de crédito
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDIENTE_EVALUACION : solicitud valida registrada
-    PENDIENTE_EVALUACION --> EVALUADA : evaluar, score de 50 o mas
-    PENDIENTE_EVALUACION --> RECHAZADA : evaluar, score menor a 50
-    EVALUADA --> EN_FINANCIACION : publicar
-    EN_FINANCIACION --> FINANCIADA : aporte que completa el saldo
-    FINANCIADA --> DESEMBOLSADA : desembolso confirmado por la pasarela
+    [*] --> PENDIENTE_EVALUACION
+    PENDIENTE_EVALUACION --> EVALUADA: Evaluación favorable
+    PENDIENTE_EVALUACION --> RECHAZADA: Evaluación desfavorable
+    EVALUADA --> EN_FINANCIACION: Aporte parcial
+    EVALUADA --> FINANCIADA: Financiación completa en un aporte
+    EN_FINANCIACION --> FINANCIADA: Se completa el monto
+    FINANCIADA --> DESEMBOLSADA: Desembolso exitoso
     RECHAZADA --> [*]
     DESEMBOLSADA --> [*]
 ```
 
-| Regla | Dónde se garantiza |
-|---|---|
-| Toda solicitud válida nace en Pendiente de evaluación (HU-03) | `ESTADO_INICIAL` |
-| Evaluar no equivale a aprobar (HU-05, criterio 4) | No existe el salto de `PENDIENTE_EVALUACION` a `EN_FINANCIACION` |
-| Solo se desembolsa una solicitud financiada (HU-08) | `DESEMBOLSADA` solo se alcanza desde `FINANCIADA` |
-| Un rechazo es definitivo | `RECHAZADA` no tiene salidas |
+Una solicitud nace en `PENDIENTE_EVALUACION`. La evaluación crediticia determina si pasa a `EVALUADA` o `RECHAZADA`.
 
-## TransaccionFinanciera
+Una solicitud evaluada favorablemente puede recibir financiación. Si el primer aporte es parcial, pasa a `EN_FINANCIACION`. Si cubre el monto total, pasa directamente a `FINANCIADA`.
+
+Una solicitud `EN_FINANCIACION` permanece en ese estado mientras existan fondos pendientes y pasa a `FINANCIADA` cuando se completa el monto solicitado.
+
+El desembolso exitoso cambia su estado a `DESEMBOLSADA`.
+
+### Reglas de integridad
+
+- No se permite financiar solicitudes pendientes de evaluación, rechazadas, financiadas o desembolsadas.
+- Los aportes acumulados no pueden superar el monto solicitado.
+- Una solicitud únicamente puede desembolsarse cuando está `FINANCIADA`.
+- Una solicitud rechazada o desembolsada no admite nuevas transiciones.
+
+## 2. Estados de las transacciones
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDIENTE : orden de desembolso creada
-    PENDIENTE --> EXITOSA : la pasarela confirma
-    PENDIENTE --> FALLIDA : la pasarela rechaza o falla
-    FALLIDA --> PENDIENTE : reintento
+    [*] --> PENDIENTE
+    PENDIENTE --> EXITOSA
+    PENDIENTE --> FALLIDA
+    FALLIDA --> PENDIENTE: Reintento conceptual
     EXITOSA --> [*]
 ```
 
-| Regla | Dónde se garantiza |
-|---|---|
-| El saldo solo se acredita con confirmación de la pasarela (HU-08, criterio 4) | `EXITOSA` solo se alcanza desde `PENDIENTE` |
-| No se duplican acreditaciones (RNF-03) | `EXITOSA` no tiene salidas |
-| Un error de pasarela no queda como éxito (RNF-05) | `FALLIDA` no puede ir directo a `EXITOSA` |
+La máquina de estados del dominio contempla los estados `PENDIENTE`, `EXITOSA` y `FALLIDA`.
+
+## 3. Prevención de desembolsos duplicados
+
+La prevención de desembolsos duplicados utiliza tres mecanismos:
+
+1. Bloqueo de la solicitud mediante `SELECT ... FOR UPDATE` en PostgreSQL.
+2. Comprobación de que no exista una transacción exitosa para la solicitud.
+3. Índice único parcial sobre `solicitud_id` para las transacciones con estado `EXITOSA`.
+
+El índice permite conservar varios intentos fallidos, pero impide registrar dos transacciones exitosas para una misma solicitud.

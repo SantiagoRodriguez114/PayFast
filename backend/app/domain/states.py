@@ -23,10 +23,20 @@ class EstadoSolicitud(StrEnum):
 ESTADO_INICIAL = EstadoSolicitud.PENDIENTE_EVALUACION
 
 TRANSICIONES_SOLICITUD = {
-    EstadoSolicitud.PENDIENTE_EVALUACION: {EstadoSolicitud.EVALUADA, EstadoSolicitud.RECHAZADA},
-    EstadoSolicitud.EVALUADA: {EstadoSolicitud.EN_FINANCIACION},
-    EstadoSolicitud.EN_FINANCIACION: {EstadoSolicitud.FINANCIADA},
-    EstadoSolicitud.FINANCIADA: {EstadoSolicitud.DESEMBOLSADA},
+    EstadoSolicitud.PENDIENTE_EVALUACION: {
+        EstadoSolicitud.EVALUADA,
+        EstadoSolicitud.RECHAZADA,
+    },
+    EstadoSolicitud.EVALUADA: {
+        EstadoSolicitud.EN_FINANCIACION,
+        EstadoSolicitud.FINANCIADA,
+    },
+    EstadoSolicitud.EN_FINANCIACION: {
+        EstadoSolicitud.FINANCIADA,
+    },
+    EstadoSolicitud.FINANCIADA: {
+        EstadoSolicitud.DESEMBOLSADA,
+    },
 }
 
 

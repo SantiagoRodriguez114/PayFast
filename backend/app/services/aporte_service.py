@@ -36,7 +36,7 @@ def crear_aporte(
 
     if monto != monto.quantize(Decimal("0.01")):
         raise AporteError(
-        "El monto del aporte no puede tener más de dos decimales."
+            "El monto del aporte no puede tener más de dos decimales."
         )
 
     try:
