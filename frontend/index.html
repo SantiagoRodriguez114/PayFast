@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PayFast, plataforma de financiación P2P simulada.">
+  <title>PayFast | Plataforma de financiación</title>
+  <link rel="stylesheet" href="./css/styles.css">
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="PayFast, inicio">
+      <span class="brand-mark">P</span>
+      <span>PayFast</span>
+    </a>
+    <div class="topbar-right">
+      <span class="environment-label">Entorno de demostración</span>
+      <button id="logout-btn" class="btn btn-outline hidden" type="button">
+        Cerrar sesión
+      </button>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <div id="notification" class="notification hidden" role="status" aria-live="polite"></div>
+
+    <section id="auth-view" class="auth-layout">
+      <div class="auth-intro">
+        <span class="eyebrow">FINANCIACIÓN COLABORATIVA</span>
+        <h1>Una forma más clara de conectar proyectos y oportunidades.</h1>
+        <p>
+          PayFast conecta emprendedores y prestamistas mediante
+          una plataforma de financiación P2P simulada.
+        </p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">01</span>
+            <div>
+              <strong>Para emprendedores</strong>
+              <p>Solicita financiación y consulta el estado de tu proyecto.</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">02</span>
+            <div>
+              <strong>Para prestamistas</strong>
+              <p>Explora solicitudes y participa con aportes simulados.</p>
+            </div>
+          </div>
+        </div>
+        <p class="disclaimer">
+          Prototipo académico. No se realizan operaciones con dinero real.
+        </p>
+      </div>
+
+      <div class="auth-card">
+        <div class="auth-tabs" role="tablist" aria-label="Acceso">
+          <button id="show-login" class="auth-tab active" type="button" aria-selected="true">
+            Iniciar sesión
+          </button>
+          <button id="show-register" class="auth-tab" type="button" aria-selected="false">
+            Crear cuenta
+          </button>
+        </div>
+
+        <form id="login-form" class="form">
+          <h2>Bienvenido de nuevo</h2>
+          <p class="form-subtitle">Ingresa con tu cuenta de PayFast.</p>
+
+          <label for="login-email">Correo electrónico</label>
+          <input id="login-email" name="correo" type="email" autocomplete="email"
+                 placeholder="nombre@correo.com" required>
+
+          <label for="login-password">Contraseña</label>
+          <input id="login-password" name="password" type="password"
+                 autocomplete="current-password" required>
+
+          <button class="btn btn-primary btn-full" type="submit">
+            Iniciar sesión
+          </button>
+        </form>
+
+        <form id="register-form" class="form hidden">
+          <h2>Crea tu cuenta</h2>
+          <p class="form-subtitle">Selecciona cómo participarás en PayFast.</p>
+
+          <label for="register-name">Nombre completo</label>
+          <input id="register-name" name="nombre" type="text"
+                 minlength="2" maxlength="120" autocomplete="name" required>
+
+          <label for="register-email">Correo electrónico</label>
+          <input id="register-email" name="correo" type="email"
+                 autocomplete="email" required>
+
+          <label for="register-password">Contraseña</label>
+          <input id="register-password" name="password" type="password"
+                 minlength="8" maxlength="128" autocomplete="new-password" required>
+          <span class="field-hint">Entre 8 y 128 caracteres.</span>
+
+          <label for="register-role">Tipo de cuenta</label>
+          <select id="register-role" name="rol" required>
+            <option value="">Selecciona un rol</option>
+            <option value="emprendedor">Emprendedor</option>
+            <option value="prestamista">Prestamista</option>
+          </select>
+
+          <button class="btn btn-primary btn-full" type="submit">
+            Crear cuenta
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section id="dashboard-view" class="dashboard hidden">
+      <div class="dashboard-heading">
+        <div>
+          <span class="eyebrow">PANEL PRINCIPAL</span>
+          <h1 id="welcome-title">Bienvenido a PayFast</h1>
+          <p>Administra tu perfil y tu billetera desde un solo lugar.</p>
+        </div>
+        <span id="role-badge" class="role-badge"></span>
+      </div>
+
+      <div class="dashboard-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>Mi perfil</h2>
+            <span class="panel-icon">01</span>
+          </div>
+          <dl class="details">
+            <div>
+              <dt>Nombre</dt>
+              <dd id="profile-name">—</dd>
+            </div>
+            <div>
+              <dt>Correo</dt>
+              <dd id="profile-email">—</dd>
+            </div>
+            <div>
+              <dt>Rol</dt>
+              <dd id="profile-role">—</dd>
+            </div>
+            <div>
+              <dt>Estado</dt>
+              <dd id="profile-status">—</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="panel wallet-panel">
+          <div class="panel-heading">
+            <h2>Mi billetera</h2>
+            <span class="panel-icon">02</span>
+          </div>
+
+          <div id="wallet-loading" class="wallet-message">
+            Consultando billetera...
+          </div>
+
+          <div id="wallet-empty" class="wallet-empty hidden">
+            <p>Todavía no tienes una billetera principal.</p>
+            <button id="create-wallet-btn" class="btn btn-primary" type="button">
+              Crear mi billetera
+            </button>
+          </div>
+
+          <div id="wallet-content" class="hidden">
+            <p class="balance-label">Saldo disponible</p>
+            <p id="wallet-balance" class="balance">$0,00</p>
+            <div class="wallet-meta">
+              <span id="wallet-currency">COP</span>
+              <span id="wallet-status">Activa</span>
+            </div>
+            <button id="refresh-wallet-btn" class="btn btn-outline" type="button">
+              Actualizar saldo
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <article class="panel next-panel">
+        <h2>Financiación P2P</h2>
+        <p id="role-description"></p>
+        <p class="field-hint">
+          Las solicitudes de crédito, evaluaciones y aportes se incorporarán
+          en el siguiente módulo.
+        </p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    PayFast · Proyecto académico de Ingeniería de Software
+  </footer>
+</body>
+</html>

@@ -5,7 +5,7 @@ from alembic import context
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine
-from app import models  # Importa todos los modelos para que Alembic pueda detectarlos
+import app.models # Importa todos los modelos para que Alembic pueda detectarlos
 
 
 config = context.config

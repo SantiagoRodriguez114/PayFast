@@ -6,6 +6,7 @@ from app.api.auth import router as auth_router
 from app.api.wallets import router as wallets_router
 from app.api import credit_requests
 from app.api.risk_evaluations import router as risk_evaluations_router
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.session import get_db
 
@@ -14,6 +15,17 @@ app = FastAPI(
     title="PayFast API",
     description="API para la plataforma FinTech PayFast",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(auth_router)
