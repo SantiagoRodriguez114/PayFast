@@ -241,3 +241,11 @@ export function contributeToRequest(requestId, monto) {
 export function getMyTransactions() {
   return apiRequest("/credit-requests/transactions/me");
 }
+
+/**
+ * Consulta el historial unificado de la billetera:
+ * recargas, aportes y desembolsos.
+ */
+export function getWalletMovements() {
+  return apiRequest("/wallets/me/movements");
+}

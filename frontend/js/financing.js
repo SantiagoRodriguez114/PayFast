@@ -15,6 +15,7 @@ import {
   getEligibleRequests,
   contributeToRequest,
   getMyTransactions,
+  getWalletMovements,
 } from "./api.js";
 
 /** Atajo para document.querySelector. */
@@ -445,6 +446,7 @@ export async function loadEligibleRequests(filters = readCatalogFilters()) {
           await Promise.all([
             loadEligibleRequests(readCatalogFilters()),
             refreshWallet(),
+            loadTransactions(),
           ]);
         } catch (error) {
           notifyUser(error.message, "error");
@@ -465,47 +467,88 @@ export async function loadEligibleRequests(filters = readCatalogFilters()) {
 /* ---------- Movimientos ---------- */
 
 /** Carga y dibuja los movimientos (desembolsos) del usuario, más recientes primero. */
+
+/**
+ * Muestra los movimientos de la billetera del usuario:
+ * recargas, aportes y desembolsos.
+ */
 export async function loadTransactions() {
   showListMessage("#transactions-list", "Cargando movimientos...");
 
   try {
-    const transactions = await getMyTransactions();
+    const movements = await getWalletMovements();
     const container = $("#transactions-list");
 
     container.replaceChildren();
 
-    if (!transactions.length) {
-      container.append(paragraph("Todavía no tienes movimientos."));
+    if (!movements.length) {
+      container.append(
+        paragraph("Todavía no tienes movimientos registrados.")
+      );
       return;
     }
 
-    const sorted = [...transactions].sort(
+    const sorted = [...movements].sort(
       (a, b) => new Date(b.fecha) - new Date(a.fecha)
     );
 
-    for (const transaction of sorted) {
-      const card = createElement("article", "transaction-item");
-      const heading = createElement("div", "item-heading");
+    const labels = {
+      RECARGA: "Recarga de billetera",
+      APORTE: "Aporte a crédito",
+      DESEMBOLSO: "Desembolso de crédito",
+    };
 
-      heading.append(
-        createElement("strong", "", `Desembolso · ${money(transaction.monto)}`),
-        statusPill(transaction.estado)
+    for (const movement of sorted) {
+      const card = createElement("article", "transaction-item");
+
+      const isIncome = movement.direccion === "INGRESO";
+      const isExpense = movement.direccion === "EGRESO";
+
+      const sign = isIncome ? "+" : isExpense ? "−" : "";
+
+      const amount = createElement(
+        "strong",
+        isIncome
+          ? "movement-income"
+          : isExpense
+            ? "movement-expense"
+            : "movement-neutral",
+        `${sign}${money(movement.monto)}`
       );
 
-      card.append(heading);
+      const heading = createElement("div", "item-heading");
 
-      if (transaction.referencia_pasarela) {
-        card.append(paragraph(`Referencia: ${transaction.referencia_pasarela}`));
-      }
+      const title = createElement(
+        "strong",
+        "",
+        labels[movement.tipo] ?? "Movimiento"
+      );
 
-      if (transaction.solicitud_id) {
+      heading.append(title, amount);
+
+      card.append(
+        heading,
+        statusPill(movement.estado)
+      );
+
+      if (movement.solicitud_id) {
         card.append(
-          paragraph(`Solicitud: ${String(transaction.solicitud_id).slice(0, 8)}`)
+          paragraph(
+            `Solicitud: ${String(movement.solicitud_id).slice(0, 8)}`
+          )
         );
       }
 
-      if (transaction.fecha) {
-        card.append(paragraph(`Fecha: ${dateText(transaction.fecha)}`));
+      if (movement.referencia) {
+        card.append(
+          paragraph(`Referencia: ${movement.referencia}`)
+        );
+      }
+
+      if (movement.fecha) {
+        card.append(
+          paragraph(`Fecha: ${dateText(movement.fecha)}`)
+        );
       }
 
       container.append(card);
@@ -515,6 +558,7 @@ export async function loadTransactions() {
     notifyUser(error.message, "error");
   }
 }
+
 
 /* ---------- Inicialización ---------- */
 
@@ -603,16 +647,23 @@ export async function loadFinancingForUser(user) {
 
   // Solo se registran desembolsos como transacciones; los aportes del
   // prestamista no aparecen en este historial.
-  $("#transactions-section").classList.toggle("hidden", !isEntrepreneur);
+  $("#transactions-section").classList.toggle(
+    "hidden",
+    !(isEntrepreneur || isLender)
+  );
 
   const tasks = [];
 
   if (isEntrepreneur) {
-    tasks.push(loadMyRequests(), loadTransactions());
+    tasks.push(loadMyRequests());
   }
 
   if (isLender) {
     tasks.push(loadEligibleRequests({}));
+  }
+
+  if (isEntrepreneur || isLender) {
+    tasks.push(loadTransactions());
   }
 
   await Promise.all(tasks);

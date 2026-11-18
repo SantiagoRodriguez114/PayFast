@@ -1,13 +1,13 @@
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.models.user import Usuario
 from app.models.wallet import Billetera
-
-from sqlalchemy import select
+from app.models.wallet_topup import RecargaBilletera
 
 
 class WalletAlreadyExists(Exception):
@@ -120,10 +120,21 @@ def recargar_billetera_simulada(
                 "La billetera se encuentra inactiva."
             )
 
+        # Actualizamos el saldo de la billetera.
         billetera.saldo = (
             (billetera.saldo or Decimal("0.00")) + monto
         )
 
+        # Guardamos el movimiento en la misma transacción.
+        # Si falla el registro, tampoco se confirma el nuevo saldo.
+        recarga = RecargaBilletera(
+            billetera_id=billetera.id,
+            monto=monto,
+        )
+
+        db.add(recarga)
+
+        # Una única confirmación para ambas operaciones.
         db.commit()
         db.refresh(billetera)
 

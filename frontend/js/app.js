@@ -18,6 +18,7 @@ import {
   loadFinancingForUser,
   resetFinancingView,
   setWalletState,
+  loadTransactions,
 } from "./financing.js";
 
 /** Atajo para document.querySelector. */
@@ -169,6 +170,48 @@ function formatMoney(amount, currency = "COP") {
     return `${numericAmount.toFixed(2)} ${currency}`;
   }
 }
+
+/**
+ * Muestra una vista previa del monto sin modificar el valor
+ * que posteriormente se envía a la API.
+ */
+function attachMoneyPreview(input) {
+  if (!input || input.dataset.moneyPreviewAttached) return;
+
+  input.dataset.moneyPreviewAttached = "true";
+
+  const preview = document.createElement("small");
+  preview.className = "money-preview";
+  preview.setAttribute("aria-live", "polite");
+
+  input.insertAdjacentElement("afterend", preview);
+
+  function update() {
+    const value = input.value.trim();
+
+    if (!value) {
+      preview.textContent = "Monto: $ 0,00 COP";
+      preview.classList.remove("invalid");
+      return;
+    }
+
+    if (!/^\d+(\.\d{1,2})?$/.test(value)) {
+      preview.textContent = "Introduce un monto válido (máximo 2 decimales).";
+      preview.classList.add("invalid");
+      return;
+    }
+
+    preview.textContent = `Monto: ${formatMoney(value)}`;
+    preview.classList.remove("invalid");
+  }
+
+  input.addEventListener("input", update);
+  input.addEventListener("change", update);
+  update();
+}
+
+attachMoneyPreview($("#topup-amount"));
+attachMoneyPreview($("#credit-amount"));
 
 /**
  * Consulta la billetera del usuario.
@@ -393,7 +436,12 @@ $("#topup-form").addEventListener("submit", async (event) => {
     // una recarga fallida.
     notify(`Recarga de ${formatMoney(monto)} acreditada.`);
 
-    await loadWallet();
+    // La recarga ya fue confirmada por el backend.
+    // Actualizamos el saldo y el historial por separado.
+    await Promise.allSettled([
+      loadWallet(),
+      loadTransactions(),
+    ]);
   } catch (error) {
     if (error.status === 403) {
       disableTopup();

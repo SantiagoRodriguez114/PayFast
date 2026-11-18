@@ -5,6 +5,7 @@ from app.models.credit_request import SolicitudCredito
 from app.models.risk_evaluation import EvaluacionRiesgo
 from app.models.aporte import Aporte
 from app.models.transaction import Transaccion
+from app.models.wallet_topup import RecargaBilletera
 
 __all__ = [
     "Usuario",
@@ -14,4 +15,5 @@ __all__ = [
     "EvaluacionRiesgo",
     "Aporte",
     "Transaccion",
+    "RecargaBilletera",
 ]

@@ -800,3 +800,78 @@ select:focus-visible {
   min-height: 32px;
   font-size: 12px;
 }
+
+/* Movimientos positivos y negativos de billetera */
+
+.movement-income {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.movement-expense {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.movement-neutral {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.transaction-item .item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Notificaciones visibles independientemente del desplazamiento */
+.notification {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9999;
+  width: min(420px, calc(100vw - 32px));
+  margin: 0;
+  padding: 18px 44px 18px 18px;
+  border-radius: 14px;
+  box-shadow: 0 16px 45px rgba(15, 23, 42, 0.18);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.notification.error {
+  border-left: 5px solid #dc2626;
+}
+
+@media (max-width: 520px) {
+  .notification {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+.money-preview {
+  display: block;
+  margin: 2px 0 12px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.money-preview.invalid {
+  color: #dc2626;
+}
+
+.movement-income {
+  color: #15803d;
+}
+
+.movement-expense {
+  color: #dc2626;
+}
+
+.movement-neutral {
+  color: #64748b;
+}

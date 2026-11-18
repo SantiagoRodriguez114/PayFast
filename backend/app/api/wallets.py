@@ -18,6 +18,8 @@ from app.services.wallet_service import (
     RecargaSimuladaError,
 )
 
+from app.services.wallet_movements_service import listar_movimientos_billetera
+
 router = APIRouter(
     prefix="/wallets",
     tags=["Billeteras"]
@@ -94,3 +96,23 @@ def recargar_saldo_simulado(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(error),
         ) from error
+
+
+@router.get(
+    "/me/movements",
+    summary="Consultar movimientos de la billetera autenticada",
+)
+def consultar_movimientos_billetera(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """
+    Consulta el historial unificado de la billetera.
+
+    La identidad proviene del JWT; no se acepta un ID de usuario
+    suministrado por el cliente.
+    """
+    return listar_movimientos_billetera(
+        db=db,
+        usuario_id=usuario.id,
+    )
